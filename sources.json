@@ -1,0 +1,357 @@
+[
+  {
+    "id": "volleyballworld",
+    "fonte": "volleyballworld.com",
+    "lang": "en",
+    "tier": 1,
+    "priorita": 0,
+    "home": "https://volleyballworld.com",
+    "feeds": [],
+    "listings": [
+      "https://volleyballworld.com/beachvolleyball/",
+      "https://volleyballworld.com/beachvolleyball/competitions/beach-pro-tour/"
+    ],
+    "url_pattern": "^/beachvolleyball/.{20,}",
+    "sempre_rilevante": false,
+    "tag": "INTL",
+    "note": "editore del Beach Pro Tour: fonte primaria, non aggregatore"
+  },
+  {
+    "id": "cev",
+    "fonte": "cev.eu",
+    "lang": "en",
+    "tier": 1,
+    "priorita": 1,
+    "home": "https://www.cev.eu",
+    "feeds": [],
+    "listings": [
+      "https://www.cev.eu/beach/"
+    ],
+    "url_pattern": "^/beach/.{15,}",
+    "sempre_rilevante": false,
+    "tag": "INTL",
+    "note": "detentore degli Europei"
+  },
+  {
+    "id": "fivb",
+    "fonte": "fivb.com",
+    "lang": "en",
+    "tier": 1,
+    "priorita": 2,
+    "home": "https://www.fivb.com",
+    "feeds": [],
+    "listings": [
+      "https://www.fivb.com/category/beach/",
+      "https://www.fivb.com/beach-volleyball/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL",
+    "note": "spesso ripubblica volleyballworld: ci pensa la dedup"
+  },
+  {
+    "id": "fipav_beach",
+    "fonte": "federvolley.it",
+    "lang": "it",
+    "tier": 1,
+    "priorita": 3,
+    "home": "https://beachvolley.federvolley.it",
+    "feeds": [],
+    "listings": [
+      "https://beachvolley.federvolley.it/notizie"
+    ],
+    "url_pattern": ".{20,}",
+    "sempre_rilevante": true,
+    "tag": "IT"
+  },
+  {
+    "id": "fipav",
+    "fonte": "federvolley.it",
+    "lang": "it",
+    "tier": 1,
+    "priorita": 4,
+    "home": "https://www.federvolley.it",
+    "feeds": [],
+    "listings": [
+      "https://www.federvolley.it/categorie-news/news-beach-volley",
+      "https://www.federvolley.it/"
+    ],
+    "url_pattern": "^/[a-z0-9][a-z0-9\\-]{24,}$",
+    "sempre_rilevante": true,
+    "tag": "IT"
+  },
+  {
+    "id": "cbv",
+    "fonte": "cbv.com.br",
+    "lang": "pt",
+    "tier": 2,
+    "priorita": 5,
+    "home": "https://cbv.com.br",
+    "feeds": [],
+    "listings": [
+      "https://cbv.com.br/noticias"
+    ],
+    "url_pattern": ".{20,}",
+    "sempre_rilevante": false,
+    "tag": "INTL",
+    "note": "Brasile: quando muove una coppia brasiliana e' notizia internazionale"
+  },
+  {
+    "id": "dvv",
+    "fonte": "volleyball-verband.de",
+    "lang": "de",
+    "tier": 2,
+    "priorita": 6,
+    "home": "https://www.volleyball-verband.de",
+    "feeds": [],
+    "listings": [
+      "https://www.volleyball-verband.de/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "nevobo",
+    "fonte": "nevobo.nl",
+    "lang": "nl",
+    "tier": 2,
+    "priorita": 7,
+    "home": "https://www.nevobo.nl",
+    "feeds": [],
+    "listings": [
+      "https://www.nevobo.nl/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "nvbf",
+    "fonte": "volleyball.no",
+    "lang": "no",
+    "tier": 2,
+    "priorita": 8,
+    "home": "https://volleyball.no",
+    "feeds": [],
+    "listings": [
+      "https://volleyball.no/news_category/sandvolleyball/"
+    ],
+    "url_pattern": ".{20,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "pzps",
+    "fonte": "pzps.pl",
+    "lang": "pl",
+    "tier": 2,
+    "priorita": 9,
+    "home": "https://www.pzps.pl",
+    "feeds": [],
+    "listings": [
+      "https://www.pzps.pl/pl/aktualnosci"
+    ],
+    "url_pattern": "^/pl/aktualnosci/\\d+/",
+    "sempre_rilevante": false,
+    "tag": "INTL",
+    "note": "molto indoor e molti Masters domestici: filtro stretto"
+  },
+  {
+    "id": "usav",
+    "fonte": "usavolleyball.org",
+    "lang": "en",
+    "tier": 2,
+    "priorita": 10,
+    "home": "https://usavolleyball.org",
+    "feeds": [],
+    "listings": [
+      "https://usavolleyball.org/beach-volleyball/"
+    ],
+    "url_pattern": ".{20,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "avp",
+    "fonte": "avp.com",
+    "lang": "en",
+    "tier": 2,
+    "priorita": 11,
+    "home": "https://avp.com",
+    "feeds": [],
+    "listings": [
+      "https://avp.com/"
+    ],
+    "url_pattern": ".{20,}",
+    "sempre_rilevante": false,
+    "tag": "INTL",
+    "note": "circuito domestico USA: rilevante solo se tocca il tour internazionale"
+  },
+  {
+    "id": "svbv",
+    "fonte": "volleyboll.se",
+    "lang": "sv",
+    "tier": 3,
+    "priorita": 12,
+    "home": "https://volleyboll.se",
+    "feeds": [],
+    "listings": [
+      "https://volleyboll.se/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "ffvb",
+    "fonte": "ffvolley.org",
+    "lang": "fr",
+    "tier": 3,
+    "priorita": 13,
+    "home": "https://www.ffvolley.org",
+    "feeds": [],
+    "listings": [
+      "https://www.ffvolley.org/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "cvf",
+    "fonte": "cvf.cz",
+    "lang": "cs",
+    "tier": 3,
+    "priorita": 14,
+    "home": "https://www.cvf.cz",
+    "feeds": [],
+    "listings": [
+      "https://www.cvf.cz/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "swissvolley",
+    "fonte": "volleyball.ch",
+    "lang": "de",
+    "tier": 3,
+    "priorita": 15,
+    "home": "https://www.volleyball.ch",
+    "feeds": [],
+    "listings": [
+      "https://www.volleyball.ch/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "volleynet",
+    "fonte": "volleynet.at",
+    "lang": "de",
+    "tier": 3,
+    "priorita": 16,
+    "home": "https://www.volleynet.at",
+    "feeds": [],
+    "listings": [
+      "https://www.volleynet.at/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "rfevb",
+    "fonte": "rfevb.com",
+    "lang": "es",
+    "tier": 3,
+    "priorita": 17,
+    "home": "https://www.rfevb.com",
+    "feeds": [],
+    "listings": [
+      "https://www.rfevb.com/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "fpv",
+    "fonte": "fpvoleibol.pt",
+    "lang": "pt",
+    "tier": 3,
+    "priorita": 18,
+    "home": "https://fpvoleibol.pt",
+    "feeds": [],
+    "listings": [
+      "https://fpvoleibol.pt/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "volleycanada",
+    "fonte": "volleyball.ca",
+    "lang": "en",
+    "tier": 3,
+    "priorita": 19,
+    "home": "https://volleyball.ca",
+    "feeds": [],
+    "listings": [
+      "https://volleyball.ca/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "volleyaus",
+    "fonte": "volleyball.org.au",
+    "lang": "en",
+    "tier": 3,
+    "priorita": 20,
+    "home": "https://volleyball.org.au",
+    "feeds": [],
+    "listings": [
+      "https://volleyball.org.au/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "volleynz",
+    "fonte": "volleyballnz.org.nz",
+    "lang": "en",
+    "tier": 3,
+    "priorita": 21,
+    "home": "https://www.volleyballnz.org.nz",
+    "feeds": [],
+    "listings": [
+      "https://www.volleyballnz.org.nz/"
+    ],
+    "url_pattern": ".{25,}",
+    "sempre_rilevante": false,
+    "tag": "INTL"
+  },
+  {
+    "id": "jva",
+    "fonte": "jva.or.jp",
+    "lang": "ja",
+    "tier": 3,
+    "priorita": 22,
+    "home": "https://www.jva.or.jp",
+    "feeds": [],
+    "listings": [
+      "https://www.jva.or.jp/"
+    ],
+    "url_pattern": ".{20,}",
+    "sempre_rilevante": false,
+    "tag": "INTL",
+    "note": "giapponese: il filtro parole chiave non copre i kanji, quasi tutto muore allo stadio 1"
+  }
+]
