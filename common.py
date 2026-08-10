@@ -12,3 +12,19 @@ ASSET_DIR = re.compile(r"/(?:_next|_nuxt|wp-content|wp-includes|wp-json|assets|s
 def is_asset(url):
     p = urlparse(url)
     return bool(ASSET_EXT.search(p.path + ("?" + p.query if p.query else "")) or ASSET_DIR.search(p.path))
+
+
+def expand_sitemap(xml, get_fn, home, depth=0):
+    """Un sitemap.xml puo' essere un INDICE di altri sitemap (usavolleyball.org lo e').
+    Scende di un livello e concatena i figli."""
+    locs = re.findall(r"<loc>([^<]+)</loc>", xml or "")
+    figli = [u for u in locs if u.lower().endswith((".xml", ".xml.gz"))][:8]
+    if not figli or depth > 1:
+        return xml
+    fuso = xml
+    for f in figli:
+        r = get_fn(f)
+        sub = r[1] if isinstance(r, tuple) else r
+        if sub and "<loc>" in sub:
+            fuso += sub
+    return fuso
