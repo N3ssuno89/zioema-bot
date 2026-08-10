@@ -21,7 +21,39 @@ STATO
 import os, re, sys, json, time, subprocess
 import requests
 
-BASE      = "https://www.federvolley.it"
+SOURCES = [
+  {
+    "id": "fipav", "fonte": "federvolley", "lang": "it",
+    "tag": "🇮🇹 ITALIA",
+    # tutti opzionali: se non impostati si usa il bot/chat di default
+    "token_env": "TG_TOKEN_ITALIA",   # bot separato per questo filone
+    "chat_env":  "TG_CHAT_ITALIA",
+    "thread_env": "TG_THREAD_ITALIA", # solo se usi un gruppo con i Topic
+    "base": "https://www.federvolley.it",
+    "listings": ["https://www.federvolley.it/categorie-news/news-beach-volley",
+                 "https://www.federvolley.it/campionati/beach-volley/news",
+                 "https://www.federvolley.it/"],
+    "art_re": r'href="(?:https://www\.federvolley\.it)?(/[a-z0-9][a-z0-9\-]{24,})"',
+    "beach_re": r"\bBeach\s*Volley\b",
+    "skip": ("/campionati","/nazionali","/categorie-news","/news","/archivio",
+             "/regolamenti","/trasparenza","/comitati","/assemblea","/stagione"),
+  },
+  {
+    # PZPS pubblica soprattutto indoor e tornei domestici polacchi:
+    # il filtro di rilevanza (nel prompt) è più importante del filtro categoria
+    "id": "pzps", "fonte": "pzps.pl", "lang": "pl",
+    "tag": "🌍 INTERNAZIONALE",
+    "token_env": "TG_TOKEN_INTL",
+    "chat_env":  "TG_CHAT_INTL",
+    "thread_env": "TG_THREAD_INTL",
+    "base": "https://www.pzps.pl",
+    "listings": ["https://www.pzps.pl/pl/aktualnosci", "https://www.pzps.pl/pl"],
+    "art_re": r'href="(?:https://www\.pzps\.pl)?(/pl/aktualnosci/\d+/[a-z0-9\-]+)"',
+    "beach_re": r"[Ss]iatk[óo]wk\w*\s+pla[żz]ow\w*",
+    "skip": (),
+  },
+]
+BASE      = SOURCES[0]["base"]
 SEEN_FILE = "seen.json"
 DRAFTS    = "drafts"
 MODEL     = "claude-sonnet-4-6"
@@ -67,23 +99,37 @@ def get(url, tries=3):
 
 
 # -------------------------------------------------------------- DISCOVERY
+def src_for(url):
+    for s_ in SOURCES:
+        if url.startswith(s_["base"]):
+            return s_
+    return SOURCES[0]
+
+
 def discover(limit=15):
     """Restituisce URL candidati. Non filtra per categoria: quella si legge
     sull'articolo, che è l'unico posto dove è garantita."""
-    for src in LISTINGS:
-        html = get(src)
-        if not html:
-            continue
-        found = []
-        for path in ART_RE.findall(html):
-            if any(path.startswith(s) for s in SKIP):
+    out = []
+    for s_ in SOURCES:
+        for listing in s_["listings"]:
+            html = get(listing)
+            if not html:
                 continue
-            u = BASE + path
-            if u not in found:
-                found.append(u)
-        if len(found) >= 3:
-            print(f"  elenco: {src} ({len(found)} link)")
-            return found[:limit]
+            found = []
+            for path in re.findall(s_["art_re"], html):
+                if any(path.startswith(k) for k in s_["skip"]):
+                    continue
+                u = s_["base"] + path if path.startswith("/") else path
+                if u not in found:
+                    found.append(u)
+            if len(found) >= 3:
+                print(f"  [{s_['id']}] {listing}: {len(found)} link")
+                out += found[:limit]
+                break
+        else:
+            print(f"  [{s_['id']}] nessun elenco leggibile")
+    if out:
+        return out
 
     for sm in SITEMAPS:                       # fallback
         xml = get(sm)
@@ -100,7 +146,8 @@ def discover(limit=15):
 
 
 # ----------------------------------------------------------------- PARSING
-def parse_article(url):
+def parse_article(url, src=None):
+    src = src or src_for(url)
     html = get(url)
     if not html:
         return None
@@ -115,7 +162,7 @@ def parse_article(url):
     text = re.sub(r"<[^>]+>", " ", body)
 
     # LA CATEGORIA E' STAMPATA SULLA PAGINA. Niente classificazione via LLM.
-    is_beach = bool(re.search(r"\bBeach\s*Volley\b", text, re.I))
+    is_beach = bool(re.search(src["beach_re"], text, re.I))
 
     paras = [re.sub(r"<[^>]+>", "", p) for p in re.findall(r"<p[^>]*>(.*?)</p>", body, flags=re.S)]
     paras = [re.sub(r"\s+", " ", p).strip() for p in paras]
@@ -126,11 +173,13 @@ def parse_article(url):
             break
         clean.append(p)
 
-    related = [r for r in dict.fromkeys(
-        re.findall(r'href="(https://www\.federvolley\.it/[a-z0-9\-]{24,})"', body)) if r != url][:2]
+    related = [src["base"] + r if r.startswith("/") else r
+               for r in dict.fromkeys(re.findall(src["art_re"], body))]
+    related = [r for r in related if r != url][:2]
 
     m = re.search(r"(\d{2}\s+[a-z]+\s+20\d{2})", text)
-    return {"url": url, "title": (meta("og:title") or "").split("|")[0].strip(),
+    return {"url": url, "src": src["id"], "fonte": src["fonte"], "lang": src["lang"],
+            "title": (meta("og:title") or "").split("|")[0].strip(),
             "date": m.group(1) if m else None, "photo": meta("og:image"),
             "body": "\n\n".join(clean), "related": related, "is_beach": is_beach}
 
@@ -154,7 +203,7 @@ REGOLE CAPTION
 - Punteggi e tempi come gancio narrativo, non come elenco.
 - Il gancio in avanti (prossimo match: data, ora, posta in gioco) va in ALTO, non in fondo.
   Se orario o avversario non sono noti non prometterli: di' che arrivano in Story.
-- Chiudi con "📌 Fonte: federvolley.it" e 6-8 hashtag pertinenti.
+- Chiudi con "📌 Fonte: {FONTE}" (te la passo io) e 6-8 hashtag pertinenti.
 - Italiano, tono diretto, emoji con parsimonia.
 
 VALORE AGGIUNTO — la parte che conta
@@ -163,10 +212,36 @@ COLLEGATO: serie aperte, set persi/vinti nel torneo, imbattibilità, precedenti,
 carica citati di sfuggita. Se trovi una statistica del genere, è il titolo. Spiega in
 "insight" come l'hai ricavata, così la verifico.
 
+FILTRO DI RILEVANZA — decidi PRIMA di scrivere
+ZioEMA parla a un pubblico italiano di beach volley. Metti "skip": true e spiega in
+"skip_reason" se la notizia è: pallavolo indoor; un torneo domestico di un altro Paese
+senza italiani; una comunicazione istituzionale (nomine, bandi, comunicati medici di
+atleti non italiani). Metti "skip": false solo se c'è ALMENO UNA di queste:
+- atleti o coppie italiane coinvolte
+- un torneo internazionale a cui l'Italia partecipa (BPT, Europei, Mondiali, Olimpiadi)
+- una notizia che cambia il quadro internazionale del beach (calendario, regolamenti,
+  infortuni di big, cambi di coppia ai vertici)
+Nel dubbio: skip. Un post irrilevante costa più di un post mancato.
+
+SE L'ARTICOLO NON È IN ITALIANO
+- Traduci il senso, non le parole. Il risultato deve leggersi come scritto in italiano.
+- NOMI PROPRI SEMPRE AL NOMINATIVO. Il polacco declina: "Bryla", "Łosiaka", "Kantora"
+  nel testo sono i casi obliqui di Bryl, Łosiak, Kantor. Non trascriverli mai declinati.
+  Stessa cosa per i luoghi: "w Starych Jabłonkach" -> "a Stare Jablonki".
+- Mantieni i segni diacritici nei cognomi (Łosiak, Wojtasik). I font li supportano.
+- Abbreviazioni polacche: ME = Campionati Europei, MŚ = Mondiali, MP = Campionati
+  polacchi, IO = Olimpiadi, PP = Coppa di Polonia.
+- Glossario: siatkówka plażowa = beach volley; mecz = partita; set = set;
+  turniej = torneo; faza grupowa = fase a gironi; ćwierćfinał = quarti;
+  półfinał = semifinale; awans = qualificazione; porażka = sconfitta;
+  zwycięstwo = vittoria; kontuzja = infortunio.
+- Se un nome o un punteggio è ambiguo dopo la traduzione, mettilo in "warnings"
+  invece di indovinare.
+
 Se un dato non è nell'articolo NON inventarlo: mettilo in "warnings".
 
 Rispondi SOLO con JSON, niente markdown, niente backtick:
-{"line1":"...","line2":"...","caption":"...","insight":"...","warnings":["..."]}"""
+{"skip":false,"skip_reason":"","line1":"...","line2":"...","caption":"...","insight":"...","warnings":["..."]}"""
 
 
 def generate_copy(article, context):
@@ -177,7 +252,8 @@ def generate_copy(article, context):
                  "content-type": "application/json"},
         json={"model": MODEL, "max_tokens": 1500, "system": SYSTEM,
               "messages": [{"role": "user", "content":
-                  f"ARTICOLO DA TRASFORMARE\nTitolo Federvolley: {article['title']}\n"
+                  f"FONTE: {article['fonte']} (lingua: {article['lang']})\n"
+                  f"TITOLO ORIGINALE: {article['title']}\n"
                   f"Data: {article['date']}\n\n{article['body']}\n\n{ctx}"}]},
         timeout=90)
     r.raise_for_status()
@@ -211,27 +287,38 @@ def smart_crop(path):
 
 
 # ------------------------------------------------------------------ TELEGRAM
-def tg(method, **kw):
+def tg(method, chat=None, thread=None, token=None, **kw):
     files = kw.pop("files", None)
-    r = requests.post(f"https://api.telegram.org/bot{TG_TOKEN}/{method}",
-                      data={"chat_id": TG_CHAT, **kw}, files=files, timeout=60)
+    data = {"chat_id": chat or TG_CHAT, **kw}
+    if thread:
+        data["message_thread_id"] = thread
+    r = requests.post(f"https://api.telegram.org/bot{token or TG_TOKEN}/{method}",
+                      data=data, files=files, timeout=60)
     if not r.ok:
         print(f"  ! telegram {method}: {r.text[:200]}")
     return r.ok
 
 
 def send(post_path, copy, article, warnings):
+    # stesso bot, destinazioni diverse: una chat (o un topic) per filone editoriale
+    src = next(s_ for s_ in SOURCES if s_["id"] == article["src"])
+    route = {
+        "token":  os.environ.get(src.get("token_env", ""), "")  or TG_TOKEN,
+        "chat":   os.environ.get(src.get("chat_env", ""), "")   or TG_CHAT,
+        "thread": os.environ.get(src.get("thread_env", ""), "") or None,
+    }
+
     # 3 messaggi separati: la caption da sola si copia con un tap sul telefono.
     with open(post_path, "rb") as f:
-        tg("sendPhoto", files={"photo": f},
-           caption=f"{copy['line1']} {copy['line2']}")
-    tg("sendMessage", text=copy["caption"], disable_web_page_preview=True)
+        tg("sendPhoto", files={"photo": f}, **route,
+           caption=f"{src['tag']}  ·  {copy['line1']} {copy['line2']}")
+    tg("sendMessage", text=copy["caption"], disable_web_page_preview=True, **route)
     tail = [f"🔗 {article['url']}"]
     if copy.get("insight"):
         tail.append(f"💡 {copy['insight']}")
     for w in warnings:
         tail.append(f"⚠️ {w}")
-    tg("sendMessage", text="\n\n".join(tail), disable_web_page_preview=True)
+    tg("sendMessage", text="\n\n".join(tail), disable_web_page_preview=True, **route)
 
 
 # ---------------------------------------------------------------------- MAIN
@@ -259,10 +346,12 @@ def process(url):
 
     context = [parse_article(r) for r in art["related"]]
     copy = generate_copy(art, context)
+    if copy.get("skip"):
+        return f"scartata: {copy.get('skip_reason','non rilevante')}"
     crop = smart_crop(photo)
     post = os.path.join(out, "post.jpg")
 
-    env = {**os.environ, "SRC": photo, "FONTE": "federvolley",
+    env = {**os.environ, "SRC": photo, "FONTE": art["fonte"],
            **{k: str(v) for k, v in crop.items() if k != "warning"}}
     subprocess.run([sys.executable, "zioema_post.py", post, copy["line1"], copy["line2"]],
                    env=env, check=True)
