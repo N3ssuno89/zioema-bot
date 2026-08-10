@@ -17,6 +17,7 @@ Aggiungere un sito = un blocco in sources.json. Nessuna riga di codice.
 import os, re, sys, json, time, html
 from urllib.parse import urljoin, urlparse
 import requests
+from common import is_asset
 
 UA = {"User-Agent": "ZioEMA-bot/1.0 (+https://instagram.com/zioema.official)"}
 API_KEY = os.environ.get("ANTHROPIC_API_KEY")
@@ -88,6 +89,8 @@ def discover(src, limit=20):
 
     def keep(u):
         if not u.startswith(home):
+            return False
+        if is_asset(u):
             return False
         path = urlparse(u).path
         return bool(pat.search(path)) if pat else len(path) > 25
@@ -229,6 +232,33 @@ def triage(cands):
 
 
 # ------------------------------------------------------------------- main
+def preflight():
+    """Verifica che il repo sia completo. Non serve nessun secret."""
+    import importlib
+    ok = True
+    attesi = ["zioema_bot.py", "zioema_post.py", "sources.json", "seen.json",
+              "fonts/Anton-Regular.ttf", "fonts/Archivo-Bold.ttf"]
+    for f in attesi:
+        e = os.path.exists(f)
+        print(f"  {'OK ' if e else 'MANCA'}  {f}")
+        ok &= e
+    print(f"  {'OK ' if os.path.exists('zioema.png') else 'assente'}  zioema.png (senza, cerchio grigio)")
+    try:
+        srcs = json.load(open("sources.json"))
+        print(f"  OK    sources.json: {len(srcs)} siti")
+    except Exception as e:
+        print(f"  MANCA sources.json illeggibile: {e}"); ok = False
+    for mod in ("PIL", "requests", "cv2"):
+        try:
+            importlib.import_module(mod); print(f"  OK    libreria {mod}")
+        except ImportError:
+            print(f"  MANCA libreria {mod}"); ok = False
+    for k in ("ANTHROPIC_API_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"):
+        print(f"  {'OK   ' if os.environ.get(k) else 'assente'}  secret {k}")
+    print("\n>>> REPO COMPLETO" if ok else "\n>>> MANCA QUALCOSA, vedi sopra")
+    return ok
+
+
 def main():
     dry = "--dry-run" in sys.argv
     sources = json.load(open("sources.json"))
@@ -240,6 +270,8 @@ def main():
     giro = int(time.time() // 900)          # un giro ogni 15 minuti
     cands, scartati = [], []
     for src in sources:
+        if src.get("attivo") is False:
+            continue
         tier = src.get("tier", 3)
         # tier1 ogni giro, tier2 ogni ora, tier3 due volte al giorno
         if tier == 2 and giro % 4 != 0:
@@ -279,6 +311,9 @@ def main():
         json.dump(sorted(seen)[-2000:], open(SEEN, "w"), indent=1)
         return
 
+    if not API_KEY:
+        print("\n(nessuna ANTHROPIC_API_KEY: mi fermo qui, lo stadio 2 non parte)")
+        return
     verdetti = triage(cands)
     promossi = []
     for v in verdetti:
@@ -306,6 +341,9 @@ def main():
 
 
 if __name__ == "__main__":
-    if not API_KEY:
+    if "--check" in sys.argv:
+        print("CONTROLLO REPO\n")
+        sys.exit(0 if preflight() else 1)
+    if not API_KEY and "--dry-run" not in sys.argv:
         sys.exit("manca ANTHROPIC_API_KEY")
     main()
