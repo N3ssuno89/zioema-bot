@@ -13,6 +13,7 @@ Mandami l'output intero: e' l'unica cosa che mi manca per chiudere la configuraz
 import json, re, sys, time
 from urllib.parse import urljoin, urlparse
 import requests
+from common import is_asset
 
 UA = {"User-Agent": "Mozilla/5.0 (compatible; ZioEMA-bot/1.0; +https://instagram.com/zioema.official)"}
 
@@ -44,8 +45,11 @@ def links_from(text, home):
 def check(src):
     home = src["home"]
     pat = re.compile(src.get("url_pattern", "."))
-    keep = lambda u: u.startswith(home) and bool(pat.search(urlparse(u).path))
+    keep = lambda u: u.startswith(home) and not is_asset(u) and bool(pat.search(urlparse(u).path))
 
+    if src.get("attivo") is False:
+        print(f"\n=== [{src['id']}] DISATTIVATO: {src.get('note','')}")
+        return
     code, page = get(home)
     print(f"\n=== [{src['id']}] {home}   (tier {src.get('tier','?')})")
     print(f"    home: HTTP {code}")
