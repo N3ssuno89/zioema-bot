@@ -5,16 +5,18 @@
     "lang": "en",
     "tier": 1,
     "priorita": 0,
-    "home": "https://volleyballworld.com",
+    "home": "https://en.volleyballworld.com",
     "feeds": [],
     "listings": [
-      "https://volleyballworld.com/beachvolleyball/",
-      "https://volleyballworld.com/beachvolleyball/competitions/beach-pro-tour/"
+      "https://en.volleyballworld.com/beachvolleyball/competitions/beach-pro-tour/news/",
+      "https://en.volleyballworld.com/beachvolleyball/competitions/beach-pro-tour/",
+      "https://en.volleyballworld.com/news/"
     ],
-    "url_pattern": "^/news/[a-z0-9\\-]{20,}",
+    "url_pattern": "/news/[a-z0-9\\-]{15,}$",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "il sitemap ha 7702 link: le news stanno sotto /news/, non /beachvolleyball/"
+    "note": "il sito vero e' en.volleyballworld.com; volleyballworld.com senza sottodominio e' un altro portale (news indoor, Lega Volley)",
+    "attivo": true
   },
   {
     "id": "cev",
@@ -63,7 +65,9 @@
     ],
     "url_pattern": "^/(?!assets/)[a-z0-9][a-z0-9\\-/]{20,}$",
     "sempre_rilevante": true,
-    "tag": "IT"
+    "tag": "IT",
+    "attivo": false,
+    "note": "il feed restituisce pagine storiche (1990, 1994...), non notizie. federvolley.it copre gia' tutto"
   },
   {
     "id": "fipav",
@@ -90,12 +94,13 @@
     "home": "https://cbv.com.br",
     "feeds": [],
     "listings": [
+      "https://cbv.com.br/noticias/volei-de-praia",
       "https://cbv.com.br/noticias"
     ],
-    "url_pattern": "^/noticias/[a-z0-9\\-]{10,}",
+    "url_pattern": "^/noticias/[a-z\\-]+/\\d{4}-\\d{2}-\\d{2}/",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "Brasile: quando muove una coppia brasiliana e' notizia internazionale"
+    "note": "sezione beach dedicata: /noticias/volei-de-praia"
   },
   {
     "id": "dvv",
@@ -110,7 +115,9 @@
     ],
     "url_pattern": "^/(?:news|aktuelles)/[a-z0-9\\-]{10,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "homepage con soli asset: servirebbe l'URL esatto della sezione news"
   },
   {
     "id": "nevobo",
@@ -188,7 +195,8 @@
     "url_pattern": "^/(?:news|blog)/[a-z0-9\\-]{15,}",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "sitemap con /events/ e /players/: la sezione news va confermata"
+    "note": "sitemap con /events/ e /players/: sezione news non individuata",
+    "attivo": false
   },
   {
     "id": "svbv",
@@ -203,7 +211,9 @@
     ],
     "url_pattern": "^/[a-z0-9\\-]{20,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "homepage con soli asset, nessun link notizia"
   },
   {
     "id": "ffvb",
@@ -218,7 +228,9 @@
     ],
     "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "il feed restituisce pagine istituzionali, non notizie"
   },
   {
     "id": "cvf",
@@ -233,7 +245,9 @@
     ],
     "url_pattern": "^/[a-z0-9\\-]{20,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "homepage con soli asset, nessun link notizia"
   },
   {
     "id": "swissvolley",
@@ -248,7 +262,9 @@
     ],
     "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "solo pagine di categoria (/wissen/cat/...)"
   },
   {
     "id": "volleynet",
@@ -263,7 +279,9 @@
     ],
     "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "solo pagine squadra (/teams/...)"
   },
   {
     "id": "rfevb",
@@ -278,7 +296,9 @@
     ],
     "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "solo pagine competizione, e quasi tutto indoor"
   },
   {
     "id": "fpv",
@@ -344,7 +364,9 @@
     ],
     "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "solo pagine sezione (/national-teams/beach)"
   },
   {
     "id": "jva",
@@ -360,6 +382,7 @@
     "url_pattern": "^/[a-z0-9\\-/]{15,}",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "giapponese: il filtro parole chiave non copre i kanji, quasi tutto muore allo stadio 1"
+    "note": "solo pagine sezione, e in giapponese il filtro non funziona",
+    "attivo": false
   }
 ]
