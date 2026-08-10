@@ -108,12 +108,22 @@ for ln, f, b, h in zip(LINES, fonts, boxes, heights):
 # ---- footer: logo + riga + fonte ----
 r = 34
 ccx, ccy = MARGIN + r, LINE_Y - 2
-logo = os.environ.get("LOGO")
+logo = os.environ.get("LOGO", "zioema.png")
 if logo and os.path.exists(logo):
-    lg = Image.open(logo).convert("RGBA").resize((r * 2, r * 2), Image.LANCZOS)
-    mask = Image.new("L", (r * 2, r * 2), 0)
-    ImageDraw.Draw(mask).ellipse([0, 0, r * 2, r * 2], fill=255)
-    canvas.paste(lg, (ccx - r, ccy - r), mask)
+    # Il blu dello scudo (#22218E) sul navy della fascia dà 1.38:1 di contrasto:
+    # invisibile. Serve un disco chiaro dietro, che porta il logo a 12.5:1.
+    lg = Image.open(logo).convert("RGBA")
+    bb = lg.split()[3].getbbox()          # via il margine trasparente
+    if bb:
+        lg = lg.crop(bb)
+    d = int(r * 2 * 0.74)                 # logo dentro al disco, con aria attorno
+    lg.thumbnail((d, d), Image.LANCZOS)
+    disc = Image.new("RGBA", (r * 2, r * 2), (255, 255, 255, 255))
+    hole = Image.new("L", (r * 2, r * 2), 0)
+    ImageDraw.Draw(hole).ellipse([0, 0, r * 2 - 1, r * 2 - 1], fill=255)
+    disc.putalpha(hole)
+    disc.paste(lg, ((r * 2 - lg.width) // 2, (r * 2 - lg.height) // 2), lg)
+    canvas.paste(disc, (ccx - r, ccy - r), disc)
 else:
     draw.ellipse([ccx - r, ccy - r, ccx + r, ccy + r], fill=(58, 62, 70))
     draw.ellipse([ccx - 11, ccy - 16, ccx + 11, ccy + 6], fill=(212, 214, 218))
