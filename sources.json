@@ -11,10 +11,10 @@
       "https://volleyballworld.com/beachvolleyball/",
       "https://volleyballworld.com/beachvolleyball/competitions/beach-pro-tour/"
     ],
-    "url_pattern": "^/beachvolleyball/.{20,}",
+    "url_pattern": "^/news/[a-z0-9\\-]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "editore del Beach Pro Tour: fonte primaria, non aggregatore"
+    "note": "il sitemap ha 7702 link: le news stanno sotto /news/, non /beachvolleyball/"
   },
   {
     "id": "cev",
@@ -47,7 +47,8 @@
     "url_pattern": ".{25,}",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "spesso ripubblica volleyballworld: ci pensa la dedup"
+    "note": "HTTP 202: blocca i bot. Le sue notizie escono comunque su volleyballworld",
+    "attivo": false
   },
   {
     "id": "fipav_beach",
@@ -60,7 +61,7 @@
     "listings": [
       "https://beachvolley.federvolley.it/notizie"
     ],
-    "url_pattern": ".{20,}",
+    "url_pattern": "^/(?!assets/)[a-z0-9][a-z0-9\\-/]{20,}$",
     "sempre_rilevante": true,
     "tag": "IT"
   },
@@ -91,7 +92,7 @@
     "listings": [
       "https://cbv.com.br/noticias"
     ],
-    "url_pattern": ".{20,}",
+    "url_pattern": "^/noticias/[a-z0-9\\-]{10,}",
     "sempre_rilevante": false,
     "tag": "INTL",
     "note": "Brasile: quando muove una coppia brasiliana e' notizia internazionale"
@@ -107,7 +108,7 @@
     "listings": [
       "https://www.volleyball-verband.de/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/(?:news|aktuelles)/[a-z0-9\\-]{10,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -122,7 +123,7 @@
     "listings": [
       "https://www.nevobo.nl/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/nieuws/[a-z0-9\\-]{15,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -137,7 +138,7 @@
     "listings": [
       "https://volleyball.no/news_category/sandvolleyball/"
     ],
-    "url_pattern": ".{20,}",
+    "url_pattern": "^/[a-z0-9\\-]{15,}/$",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -168,9 +169,10 @@
     "listings": [
       "https://usavolleyball.org/beach-volleyball/"
     ],
-    "url_pattern": ".{20,}",
+    "url_pattern": "^/beach-volleyball/[a-z0-9\\-]{15,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "note": "il feed restituisce se stesso: si prova via HTML"
   },
   {
     "id": "avp",
@@ -183,10 +185,10 @@
     "listings": [
       "https://avp.com/"
     ],
-    "url_pattern": ".{20,}",
+    "url_pattern": "^/(?:news|blog)/[a-z0-9\\-]{15,}",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "circuito domestico USA: rilevante solo se tocca il tour internazionale"
+    "note": "sitemap con /events/ e /players/: la sezione news va confermata"
   },
   {
     "id": "svbv",
@@ -199,7 +201,7 @@
     "listings": [
       "https://volleyboll.se/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/[a-z0-9\\-]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -214,7 +216,7 @@
     "listings": [
       "https://www.ffvolley.org/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -229,7 +231,7 @@
     "listings": [
       "https://www.cvf.cz/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/[a-z0-9\\-]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -244,7 +246,7 @@
     "listings": [
       "https://www.volleyball.ch/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -259,7 +261,7 @@
     "listings": [
       "https://www.volleynet.at/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -274,7 +276,7 @@
     "listings": [
       "https://www.rfevb.com/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -291,7 +293,9 @@
     ],
     "url_pattern": ".{25,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "pagina vuota per un bot: sito renderizzato in JavaScript"
   },
   {
     "id": "volleycanada",
@@ -306,7 +310,9 @@
     ],
     "url_pattern": ".{25,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "HTTP 403: blocca i bot"
   },
   {
     "id": "volleyaus",
@@ -321,7 +327,9 @@
     ],
     "url_pattern": ".{25,}",
     "sempre_rilevante": false,
-    "tag": "INTL"
+    "tag": "INTL",
+    "attivo": false,
+    "note": "HTTP 202: blocca i bot"
   },
   {
     "id": "volleynz",
@@ -334,7 +342,7 @@
     "listings": [
       "https://www.volleyballnz.org.nz/"
     ],
-    "url_pattern": ".{25,}",
+    "url_pattern": "^/[a-z0-9\\-/]{20,}",
     "sempre_rilevante": false,
     "tag": "INTL"
   },
@@ -349,7 +357,7 @@
     "listings": [
       "https://www.jva.or.jp/"
     ],
-    "url_pattern": ".{20,}",
+    "url_pattern": "^/[a-z0-9\\-/]{15,}",
     "sempre_rilevante": false,
     "tag": "INTL",
     "note": "giapponese: il filtro parole chiave non copre i kanji, quasi tutto muore allo stadio 1"
