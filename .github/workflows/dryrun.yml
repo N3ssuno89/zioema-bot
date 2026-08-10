@@ -1,0 +1,26 @@
+name: Prova a vuoto
+
+# Fa girare la raccolta VERA ma senza mandare niente e senza salvare niente.
+# Serve solo ANTHROPIC_API_KEY. Nessun secret Telegram.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  dry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # per la prova a vuoto bastano queste: Pillow e OpenCV servono
+      # solo quando genera davvero le grafiche
+      - run: pip install requests
+
+      - name: Raccolta e filtro, senza inviare
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 harvest.py --dry-run
