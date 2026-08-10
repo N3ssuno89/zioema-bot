@@ -13,7 +13,7 @@ Mandami l'output intero: e' l'unica cosa che mi manca per chiudere la configuraz
 import json, re, sys, time
 from urllib.parse import urljoin, urlparse
 import requests
-from common import is_asset
+from common import is_asset, expand_sitemap
 
 UA = {"User-Agent": "Mozilla/5.0 (compatible; ZioEMA-bot/1.0; +https://instagram.com/zioema.official)"}
 
@@ -57,10 +57,13 @@ def check(src):
         print("    ! irraggiungibile o blocca il bot -> da valutare se tenerlo")
         return
 
+    visti_feed = False
     for feed in feeds_for(home, page):
         c, txt = get(feed)
         if c != 200 or "<" not in txt:
             continue
+        if "sitemap" in feed and "<loc>" in txt:
+            txt = expand_sitemap(txt, get, home)
         hits = [u for u in dict.fromkeys(links_from(txt, home)) if keep(u)]
         tot = len(dict.fromkeys(links_from(txt, home)))
         if hits:
@@ -68,11 +71,11 @@ def check(src):
             for u in hits[:3]:
                 print(f"             {u}")
             return
-        elif tot > 5:
-            print(f"    feed trovato ma pattern SBAGLIATO: {feed} ({tot} link, 0 passano)")
+        elif tot > 5 and not visti_feed:
+            visti_feed = True
+            print(f"    feed inutile: {feed} ({tot} link, 0 passano) -> provo le pagine elenco")
             for u in list(dict.fromkeys(links_from(txt, home)))[:3]:
                 print(f"             esempio: {urlparse(u).path}")
-            return
 
     for listing in src.get("listings", []):
         c, txt = get(listing)
@@ -87,9 +90,8 @@ def check(src):
                 print(f"             {u}")
             return
         print(f"    elenco {listing}: {len(allu)} link, 0 passano il pattern")
-        for u in allu[:5]:
+        for u in allu[:4]:
             print(f"             esempio: {urlparse(u).path}")
-        return
 
     print("    ! niente da nessuna parte")
 
