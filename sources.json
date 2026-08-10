@@ -27,12 +27,14 @@
     "home": "https://www.cev.eu",
     "feeds": [],
     "listings": [
+      "https://www.cev.eu/beach/news/",
+      "https://www.cev.eu/news/",
       "https://www.cev.eu/beach/"
     ],
-    "url_pattern": "^/beach/.{15,}",
+    "url_pattern": "^/(?:beach/)?(?:news|article)/[a-z0-9\\-]{15,}",
     "sempre_rilevante": false,
     "tag": "INTL",
-    "note": "detentore degli Europei"
+    "note": "le pagine /beach/ sono competizioni: serve trovare la sezione news vera"
   },
   {
     "id": "fivb",
