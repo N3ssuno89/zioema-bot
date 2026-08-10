@@ -1,9 +1,13 @@
 name: ZioEMA bot
 
 on:
-  schedule:
-    - cron: "*/15 * * * *"
-  workflow_dispatch:
+  # SCHEDULE DISATTIVATO DI PROPOSITO.
+  # I pattern URL di 20 siti su 23 non sono ancora verificati: se parte da solo
+  # ogni 15 minuti prima del primo --dry-run, brucia chiamate API e ti riempie
+  # Telegram di bozze sbagliate. Togli il commento SOLO dopo il dry-run.
+  # schedule:
+  #   - cron: "*/15 * * * *"
+  workflow_dispatch:          # per ora parte solo col bottone "Run workflow"
 
 permissions:
   contents: write
@@ -30,7 +34,7 @@ jobs:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python3 zioema_bot.py
+        run: python3 harvest.py
 
       - name: Salva lo stato
         run: |
