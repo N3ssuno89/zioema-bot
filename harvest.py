@@ -17,9 +17,10 @@ Aggiungere un sito = un blocco in sources.json. Nessuna riga di codice.
 import os, re, sys, json, time, html
 from urllib.parse import urljoin, urlparse
 import requests
-from common import is_asset
+from common import is_asset, expand_sitemap
 
-UA = {"User-Agent": "ZioEMA-bot/1.0 (+https://instagram.com/zioema.official)"}
+UA = {"User-Agent": "Mozilla/5.0 (compatible; ZioEMA-bot/1.0; +https://instagram.com/zioema.official)",
+      "Accept-Language": "it,en;q=0.8"}
 API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 MODEL = "claude-sonnet-4-6"
 SEEN = "seen.json"
@@ -75,8 +76,22 @@ def find_feeds(home):
 
 
 def urls_from_feed(xml, home):
+    """Restituisce gli URL, i piu' recenti per primi.
+    Un sitemap.xml non e' ordinato per data: se non si guarda <lastmod> si finisce
+    per leggere venti articoli a caso invece degli ultimi venti."""
     if not xml or "<" not in xml:
         return []
+
+    datati = []
+    for blocco in re.findall(r"<url>(.*?)</url>", xml, flags=re.S):
+        loc = re.search(r"<loc>([^<]+)</loc>", blocco)
+        mod = re.search(r"<lastmod>([^<]+)</lastmod>", blocco)
+        if loc:
+            datati.append((mod.group(1) if mod else "", loc.group(1).strip()))
+    if any(d for d, _ in datati):
+        datati.sort(reverse=True)
+        return [urljoin(home, html.unescape(u)) for _, u in datati]
+
     links = re.findall(r"<link[^>]*>([^<]+)</link>", xml)
     links += re.findall(r'<link[^>]+href=["\']([^"\']+)', xml)
     links += re.findall(r"<loc>([^<]+)</loc>", xml)
@@ -97,7 +112,10 @@ def discover(src, limit=20):
 
     # 1. feed dichiarati, poi autodiscovery
     for feed in (src.get("feeds") or []) + find_feeds(home):
-        found = [u for u in urls_from_feed(get(feed), home) if keep(u)]
+        xml = get(feed)
+        if xml and "sitemap" in feed and "<loc>" in xml:
+            xml = expand_sitemap(xml, get, home)
+        found = [u for u in urls_from_feed(xml, home) if keep(u)]
         if len(found) >= 3:
             return list(dict.fromkeys(found))[:limit], f"feed:{feed}"
 
