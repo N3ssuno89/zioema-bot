@@ -1,20 +1,25 @@
 name: ZioEMA bot
 
 on:
-  # ATTIVA LO SCHEDULE SOLO DOPO che le prime bozze su Telegram ti convincono.
   schedule:
-  - cron: "*/15 * * * *"
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       modalita:
         description: "Cosa fare"
         required: true
-        default: seed
+        default: invia
         type: choice
         options:
-          - seed          # marca tutto come gia' visto, NON genera e NON manda
-          - invia         # genera le bozze e le manda su Telegram
-          - prova         # come 'invia' ma senza mandare niente
+          - invia         # giro normale: genera e manda le bozze nuove
+          - prova         # come invia, ma non manda e non salva niente
+          - seed          # marca tutto come gia' visto (si fa una volta sola)
+          - test-invio    # forza UN articolo, anche se gia' visto: serve a
+                          # provare grafica + invio Telegram su un pezzo noto
+      url:
+        description: "URL articolo (solo per test-invio)"
+        required: false
+        type: string
 
 permissions:
   contents: write
@@ -40,14 +45,17 @@ jobs:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+          URL:                ${{ inputs.url }}
         run: |
           case "${{ inputs.modalita }}" in
-            seed)  python3 harvest.py --seed --all ;;
-            prova) python3 harvest.py --dry-run --all ;;
-            *)     python3 harvest.py --all ;;
+            seed)       python3 harvest.py --seed --all ;;
+            prova)      python3 harvest.py --dry-run --all ;;
+            test-invio) python3 zioema_bot.py "$URL" ;;
+            *)          python3 harvest.py --all ;;
           esac
 
       - name: Salva lo stato
+        if: ${{ inputs.modalita != 'test-invio' }}
         run: |
           git config user.name  "zioema-bot"
           git config user.email "bot@users.noreply.github.com"
