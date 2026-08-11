@@ -176,10 +176,16 @@ def signature(title):
     return {t for t in toks if t not in STOP}
 
 
-def same_story(a, b, soglia=0.55):
-    if not a or not b:
+def same_story(a, b, soglia=0.40):
+    """Jaccard, non overlap: con min() al denominatore un titolo di 3 token
+    risultava 'uguale' a qualsiasi cosa ne condividesse 2. Servono anche
+    almeno 3 token in comune, altrimenti bastano due parole generiche."""
+    if len(a) < 3 or len(b) < 3:
         return False
-    return len(a & b) / min(len(a), len(b)) >= soglia
+    comuni = a & b
+    if len(comuni) < 3:
+        return False
+    return len(comuni) / len(a | b) >= soglia
 
 
 def dedup(cands, sigs_pubblicate):
