@@ -1,13 +1,20 @@
 name: ZioEMA bot
 
 on:
-  # SCHEDULE DISATTIVATO DI PROPOSITO.
-  # I pattern URL di 20 siti su 23 non sono ancora verificati: se parte da solo
-  # ogni 15 minuti prima del primo --dry-run, brucia chiamate API e ti riempie
-  # Telegram di bozze sbagliate. Togli il commento SOLO dopo il dry-run.
+  # ATTIVA LO SCHEDULE SOLO DOPO che le prime bozze su Telegram ti convincono.
   # schedule:
   #   - cron: "*/15 * * * *"
-  workflow_dispatch:          # per ora parte solo col bottone "Run workflow"
+  workflow_dispatch:
+    inputs:
+      modalita:
+        description: "Cosa fare"
+        required: true
+        default: seed
+        type: choice
+        options:
+          - seed          # marca tutto come gia' visto, NON genera e NON manda
+          - invia         # genera le bozze e le manda su Telegram
+          - prova         # come 'invia' ma senza mandare niente
 
 permissions:
   contents: write
@@ -25,21 +32,25 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
 
       - run: pip install -r requirements.txt
 
-      - name: Genera e manda le bozze
+      - name: Esegui
         env:
           ANTHROPIC_API_KEY:  ${{ secrets.ANTHROPIC_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: python3 harvest.py
+        run: |
+          case "${{ inputs.modalita }}" in
+            seed)  python3 harvest.py --seed --all ;;
+            prova) python3 harvest.py --dry-run --all ;;
+            *)     python3 harvest.py --all ;;
+          esac
 
       - name: Salva lo stato
         run: |
           git config user.name  "zioema-bot"
           git config user.email "bot@users.noreply.github.com"
-          git add seen.json
+          git add seen.json sigs.json 2>/dev/null || true
           git diff --staged --quiet || git commit -m "seen: $(date -u +%FT%TZ)"
-          git push
+          git push || true
