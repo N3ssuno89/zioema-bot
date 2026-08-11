@@ -2,8 +2,8 @@ name: ZioEMA bot
 
 on:
   # ATTIVA LO SCHEDULE SOLO DOPO che le prime bozze su Telegram ti convincono.
-  # schedule:
-  #   - cron: "*/15 * * * *"
+  schedule:
+  - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       modalita:
