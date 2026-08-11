@@ -208,6 +208,9 @@ def keyword_gate(art, src):
         return all(x in t for x in k) if isinstance(k, tuple) else k in t
     if not any(hit(k) for k in BEACH):
         return False, "non è beach volley"
+    if re.match(r"^\s*(comunicato stampa|press release|comunicato n|newsletter|"
+                r"rassegna stampa|convocazion)", art.get("title", ""), re.I):
+        return False, "bollettino/comunicato: contenitore multi-argomento, non una notizia"
     if src.get("sempre_rilevante"):
         return True, "sorgente sempre rilevante"
     if not any(hit(k) for k in INTL):
@@ -278,7 +281,9 @@ def preflight():
 
 
 def main():
-    dry = "--dry-run" in sys.argv
+    dry  = "--dry-run" in sys.argv
+    tutte = "--all" in sys.argv      # ignora i tier: utile nei lanci a mano
+    seed  = "--seed" in sys.argv     # marca tutto come gia' visto, non genera niente
     sources = json.load(open("sources.json"))
     try:
         seen = set(json.load(open(SEEN)))
@@ -290,7 +295,7 @@ def main():
     for src in sources:
         if src.get("attivo") is False:
             continue
-        tier = src.get("tier", 3)
+        tier = 1 if tutte else src.get("tier", 3)
         # tier1 ogni giro, tier2 ogni ora, tier3 due volte al giorno
         if tier == 2 and giro % 4 != 0:
             continue
@@ -315,6 +320,13 @@ def main():
             time.sleep(2)
 
     print(f"\nstadio 1: {len(cands)} candidati, {len(scartati)} scartati sulle parole chiave")
+
+    if seed:
+        for c in cands:
+            seen.add(c["url"])
+        json.dump(sorted(seen)[-2000:], open(SEEN, "w"), indent=1)
+        print(f"--seed: {len(seen)} URL marcati come gia' visti. Niente generato.")
+        return
 
     try:
         sigs = [set(x) for x in json.load(open("sigs.json"))]
