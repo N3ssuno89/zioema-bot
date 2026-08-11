@@ -23,4 +23,4 @@ jobs:
       - name: Raccolta e filtro, senza inviare
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: python3 harvest.py --dry-run
+        run: python3 harvest.py --dry-run --all
