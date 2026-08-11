@@ -21,38 +21,23 @@ STATO
 import os, re, sys, json, time, subprocess
 import requests
 
-SOURCES = [
-  {
-    "id": "fipav", "fonte": "federvolley", "lang": "it",
-    "tag": "🇮🇹 ITALIA",
-    # tutti opzionali: se non impostati si usa il bot/chat di default
-    "token_env": "TG_TOKEN_ITALIA",   # bot separato per questo filone
-    "chat_env":  "TG_CHAT_ITALIA",
-    "thread_env": "TG_THREAD_ITALIA", # solo se usi un gruppo con i Topic
-    "base": "https://www.federvolley.it",
-    "listings": ["https://www.federvolley.it/categorie-news/news-beach-volley",
-                 "https://www.federvolley.it/campionati/beach-volley/news",
-                 "https://www.federvolley.it/"],
-    "art_re": r'href="(?:https://www\.federvolley\.it)?(/[a-z0-9][a-z0-9\-]{24,})"',
-    "beach_re": r"\bBeach\s*Volley\b",
-    "skip": ("/campionati","/nazionali","/categorie-news","/news","/archivio",
-             "/regolamenti","/trasparenza","/comitati","/assemblea","/stagione"),
-  },
-  {
-    # PZPS pubblica soprattutto indoor e tornei domestici polacchi:
-    # il filtro di rilevanza (nel prompt) è più importante del filtro categoria
-    "id": "pzps", "fonte": "pzps.pl", "lang": "pl",
-    "tag": "🌍 INTERNAZIONALE",
-    "token_env": "TG_TOKEN_INTL",
-    "chat_env":  "TG_CHAT_INTL",
-    "thread_env": "TG_THREAD_INTL",
-    "base": "https://www.pzps.pl",
-    "listings": ["https://www.pzps.pl/pl/aktualnosci", "https://www.pzps.pl/pl"],
-    "art_re": r'href="(?:https://www\.pzps\.pl)?(/pl/aktualnosci/\d+/[a-z0-9\-]+)"',
-    "beach_re": r"[Ss]iatk[óo]wk\w*\s+pla[żz]ow\w*",
-    "skip": (),
-  },
-]
+# UNA SOLA lista di sorgenti, condivisa con harvest.py: sources.json.
+# Prima qui ce n'era una seconda, hardcoded, e le sorgenti non previste
+# ripiegavano su federvolley -> fonte sbagliata stampata sulla grafica.
+def _carica_sorgenti():
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "sources.json")) as f:
+        srcs = json.load(f)
+    for x in srcs:
+        x["base"] = x["home"]
+        x.setdefault("beach_re", r"beach\s*volley|siatk\w*\s+pla\w*|v[oô]lei de praia|beachvolley")
+        intl = x.get("tag") != "IT"
+        x["tag"] = "🌍 INTERNAZIONALE" if intl else "🇮🇹 ITALIA"
+        x["token_env"]  = "TG_TOKEN_INTL"  if intl else "TG_TOKEN_ITALIA"
+        x["chat_env"]   = "TG_CHAT_INTL"   if intl else "TG_CHAT_ITALIA"
+        x["thread_env"] = "TG_THREAD_INTL" if intl else "TG_THREAD_ITALIA"
+    return srcs
+
+SOURCES = _carica_sorgenti()
 BASE      = SOURCES[0]["base"]
 SEEN_FILE = "seen.json"
 DRAFTS    = "drafts"
@@ -100,10 +85,10 @@ def get(url, tries=3):
 
 # -------------------------------------------------------------- DISCOVERY
 def src_for(url):
-    for s_ in SOURCES:
-        if url.startswith(s_["base"]):
-            return s_
-    return SOURCES[0]
+    cand = [x for x in SOURCES if url.startswith(x["base"])]
+    if not cand:
+        raise ValueError(f"sorgente sconosciuta per {url}: aggiungila a sources.json")
+    return max(cand, key=lambda x: len(x["base"]))
 
 
 def discover(limit=15):
