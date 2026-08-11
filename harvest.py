@@ -314,15 +314,18 @@ def main():
                 continue
             art = extract(u)
             if not art or not art["title"] or not art["photo"] or len(art["body"]) < 200:
-                scartati.append((u, "articolo incompleto"))
-                seen.add(u)
+                # NON marcare come visto: l'articolo puo' essere ancora in
+                # pubblicazione (foto o corpo non ancora online). Riprova al giro dopo.
+                scartati.append((u, "articolo incompleto, riprovo al prossimo giro"))
                 continue
             ok, why = keyword_gate(art, src)
             art.update(fonte=src["fonte"], lang=src["lang"], src=src["id"],
                        tag=src["tag"], priorita=src.get("priorita", 99))
-            (cands if ok else scartati).append(art if ok else (u, why))
-            if not ok:
-                seen.add(u)
+            if ok:
+                cands.append(art)
+            else:
+                scartati.append((u, why))
+                seen.add(u)      # scarto di merito: definitivo
             time.sleep(2)
 
     print(f"\nstadio 1: {len(cands)} candidati, {len(scartati)} scartati sulle parole chiave")
@@ -359,6 +362,9 @@ def main():
         (promossi if v["pubblica"] else []).append(c) if v["pubblica"] else seen.add(c["url"])
 
     print(f"\nstadio 2: {len(promossi)} da scrivere su {len(cands)} candidati")
+    if not promossi and not dry:
+        print("Nessuna notizia nuova da pubblicare in questo giro. "
+              "Normale se non e' uscito niente dall'ultimo controllo.")
     if dry:
         print("(dry-run: non genero e non mando niente)")
         return
