@@ -123,13 +123,23 @@ def parse_article(url, src=None):
     # gli articoli collegati ("QUI la notizia") danno le statistiche incrociate:
     # si riconoscono con lo stesso url_pattern usato da harvest.py
     pat = re.compile(src.get("url_pattern", "."))
+    # I "related" di molti siti puntano ad archivi storici (federvolley linka
+    # pagine di pallavolo indoor anni '90). Senza filtro il modello riceve
+    # contesto inutile e perde le statistiche incrociate, che sono il valore vero.
+    def token(t):
+        return {w for w in re.findall(r"[a-z]{4,}", t.lower()) if w not in
+                ("della", "delle", "dello", "degli", "sono", "come", "dopo", "nella")}
+    chiave = token(url.rsplit("/", 1)[-1] + " " + (meta("og:title") or ""))
     related = []
     for h in dict.fromkeys(re.findall(r'href=["\']([^"\']+)', body)):
         u2 = urljoin(src["base"], h)
         if u2 == url or not u2.startswith(src["base"]) or is_asset(u2):
             continue
-        if pat.search(urlparse(u2).path):
-            related.append(u2)
+        if not pat.search(urlparse(u2).path):
+            continue
+        if len(chiave & token(u2.rsplit("/", 1)[-1])) < 2:
+            continue          # non parla della stessa vicenda
+        related.append(u2)
     related = related[:2]
 
     m = re.search(r"(\d{2}\s+[a-z]+\s+20\d{2})", text)
@@ -152,12 +162,22 @@ REGOLE TITOLO (vincolanti)
 - Non chiamare "impresa" o "sorpresa" una vittoria di chi era favorito: controlla seeding
   o ranking nell'articolo prima di scegliere il registro.
 - Il gancio migliore è quasi sempre un numero o un nome grosso, non l'esito generico.
+- MAI DARE PER FATTO CIO' CHE E' ANCORA IN GIOCO. Se un traguardo dipende da una
+  partita non ancora giocata, il titolo lo scrive come POSTA IN PALIO, non come esito.
+  Sbagliato: "GOTTARDI E ORSI / TOTH AGLI OTTAVI" quando gli ottavi si decidono domani.
+  Giusto: "DOMANI IL MATCH / CHE VALE GLI OTTAVI" oppure il fatto gia' avvenuto,
+  cioe' la vittoria di oggi e il punteggio.
+  Prima di scrivere un traguardo verifica nell'articolo se e' gia' acquisito o se e'
+  condizionato. Se nel testo compare "con una vittoria", "in caso di", "servira'",
+  "potrebbe", quel traguardo NON e' acquisito. Nel dubbio racconta cio' che e'
+  successo, non cio' che potrebbe succedere: e' comunque piu' forte di una previsione.
 
 REGOLE CAPTION (vincolanti)
 - MASSIMO 350 CARATTERI hashtag esclusi. È una didascalia Instagram, non un articolo.
   Se non ci sta, taglia: prima i dettagli di contorno, poi i punteggi. MAI il gancio in avanti.
 - Massimo 3 blocchi di testo separati da riga vuota. Non uno in più.
 - Payoff nei PRIMI 125 CARATTERI: Instagram tronca lì e il titolo ha già promesso qualcosa.
+- Stessa regola del titolo: i traguardi condizionati si scrivono come condizionati.
 - Il gancio in avanti (prossimo appuntamento: data, posta in gioco) va in ALTO, non in fondo.
   Se orario o avversario non sono noti non prometterli: di' che arrivano in Story.
 - Chiudi con "📌 Fonte: {FONTE}" (te la passo io) e 5-7 hashtag pertinenti.
