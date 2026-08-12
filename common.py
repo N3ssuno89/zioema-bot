@@ -28,3 +28,30 @@ def expand_sitemap(xml, get_fn, home, depth=0):
         if sub and "<loc>" in sub:
             fuso += sub
     return fuso
+
+
+def estrai_json(txt, atteso="oggetto"):
+    """Il modello a volte antepone una frase ('Ecco il JSON:') o incapsula in
+    ```json. json.loads() su quel testo esplode con 'Expecting value: line 1
+    column 1'. Qui si ritaglia la prima struttura JSON bilanciata che si trova."""
+    import json
+    t = re.sub(r"```(?:json)?", "", txt or "").strip()
+    apri, chiudi = ("[", "]") if atteso == "lista" else ("{", "}")
+    i = t.find(apri)
+    if i == -1:
+        raise ValueError(f"nessun JSON nella risposta. Ricevuto: {t[:300]!r}")
+    livello, in_str, esc = 0, False, False
+    for j in range(i, len(t)):
+        ch = t[j]
+        if in_str:
+            if esc:      esc = False
+            elif ch == "\\": esc = True
+            elif ch == '"':  in_str = False
+            continue
+        if ch == '"':      in_str = True
+        elif ch == apri:   livello += 1
+        elif ch == chiudi:
+            livello -= 1
+            if livello == 0:
+                return json.loads(t[i:j + 1])
+    raise ValueError(f"JSON troncato (max_tokens?). Inizio: {t[i:i+200]!r}")
