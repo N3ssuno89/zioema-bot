@@ -268,6 +268,62 @@ def generate_copy(article, context, photo_path=None):
             f"caratteri ricevuti={len(txt)}, inizio=<<{txt[:200]}>>") from None
 
 
+# ------------------------------------------------------ REVISIONE ITALIANO
+# Errori meccanici: si correggono senza spendere una chiamata.
+CALCHI = [
+    (r"\bIN (\d{4})\b",            r"NEL \1"),      # "in 2026" -> "nel 2026"
+    (r"\bIN (\d{4}/\d{2,4})\b",    r"NEL \1"),
+    # "nel agosto" e' sbagliato; "in agosto" va sempre bene, "a agosto" no
+    (r"\bNEL (GENNAIO|FEBBRAIO|MARZO|APRILE|MAGGIO|GIUGNO|LUGLIO|AGOSTO|"
+     r"SETTEMBRE|OTTOBRE|NOVEMBRE|DICEMBRE)\b", r"IN \1"),
+    (r"\bDI IL\b", "DEL"), (r"\bDI LA\b", "DELLA"), (r"\bA IL\b", "AL"),
+]
+
+REVISORE = """Sei un revisore di italiano per una testata sportiva.
+Ricevi titolo (2 righe) e didascalia di un post Instagram, tradotti da un'altra lingua.
+
+CORREGGI SOLO errori di lingua italiana:
+- preposizioni sbagliate, calchi da inglese/portoghese/polacco ("in 2026" -> "nel 2026")
+- concordanze di genere e numero, articoli, accenti e apostrofi
+- nomi propri stranieri: al NOMINATIVO, con i segni diacritici corretti
+  (il polacco declina: "Bryla" -> "Bryl, "Losiaka" -> "Łosiak")
+- toponimi nella forma italiana d'uso
+
+NON toccare: senso, tono, punteggi, nomi, hashtag, emoji, lunghezza.
+Le righe del titolo devono restare MAIUSCOLE e fra 14 e 17 caratteri.
+Se non c'e' niente da correggere restituisci il testo identico.
+
+Rispondi con il solo JSON: {"line1":"...","line2":"...","caption":"...","corretto":["cosa hai cambiato"]}"""
+
+
+def revisione_italiano(copy):
+    """Un secondo passaggio dedicato: il modello che scrive e' concentrato su
+    gancio e sintesi, e lascia passare calchi dalla lingua d'origine."""
+    for campo in ("line1", "line2", "caption"):
+        for pat, rep in CALCHI:
+            copy[campo] = re.sub(pat, rep, copy.get(campo, ""))
+
+    payload = {k: copy.get(k, "") for k in ("line1", "line2", "caption")}
+    try:
+        r = requests.post("https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": API_KEY, "anthropic-version": "2023-06-01",
+                     "content-type": "application/json"},
+            json={"model": MODEL, "max_tokens": 2000, "system": REVISORE,
+                  "messages": [{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]},
+            timeout=60)
+        r.raise_for_status()
+        txt = "".join(b.get("text", "") for b in r.json()["content"])
+        rev = estrai_json(txt, "oggetto")
+    except Exception as e:
+        print(f"  . revisione italiano saltata ({e})")
+        return copy, []
+
+    for campo in ("line1", "line2", "caption"):
+        if rev.get(campo):
+            copy[campo] = rev[campo]
+    return copy, rev.get("corretto", [])
+
+
 # ------------------------------------------------------------ CROP AUTOMATICO
 def smart_crop(path):
     """Calcola il taglio: sopra la linea del costume, centrato sui volti.
@@ -381,6 +437,9 @@ def process(url):
     copy = generate_copy(art, context, photo)
     if copy.get("skip"):
         return f"scartata: {copy.get('skip_reason','non rilevante')}"
+    copy, corretti = revisione_italiano(copy)
+    for c in corretti:
+        print(f"  . italiano corretto: {c}")
     crop = smart_crop(photo)
     post = os.path.join(out, "post.jpg")
 
