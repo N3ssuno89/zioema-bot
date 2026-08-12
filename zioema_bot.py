@@ -245,27 +245,24 @@ def generate_copy(article, context, photo_path=None):
         except Exception as e:
             print(f"  . foto non allegata al modello ({e})")
 
+    # ultima istruzione = quella che pesa di piu': deve restare in fondo
+    contenuto.append({"type": "text", "text":
+        "Rispondi ORA con il solo oggetto JSON. Niente ragionamenti, niente analisi, "
+        "niente elenchi di controllo: il primo carattere deve essere '{' e l'ultimo '}'."})
+
     r = requests.post("https://api.anthropic.com/v1/messages",
         headers={"x-api-key": API_KEY, "anthropic-version": "2023-06-01",
                  "content-type": "application/json"},
-        json={"model": MODEL, "max_tokens": 4000, "system": SYSTEM,
-              "messages": [{"role": "user", "content": contenuto},
-                           {"role": "assistant", "content": "{"}]},
+        json={"model": MODEL, "max_tokens": 8000, "system": SYSTEM,
+              "messages": [{"role": "user", "content": contenuto}]},
         timeout=90)
     if r.status_code != 200:
         raise RuntimeError(f"API HTTP {r.status_code}: {r.text[:300]}")
     dati = r.json()
-    txt = "{" + "".join(b.get("text", "") for b in dati.get("content", []))
-    pulito = re.sub(r"^```(?:json)?|```$", "", txt.strip(), flags=re.M).strip()
-
-    # se il modello ha aggiunto una frase prima o dopo, tieni solo l'oggetto JSON
-    if not pulito.startswith("{"):
-        g = re.search(r"\{.*\}", pulito, re.S)
-        pulito = g.group(0) if g else pulito
-
+    txt = "".join(b.get("text", "") for b in dati.get("content", []))
     try:
-        return json.loads(pulito)
-    except json.JSONDecodeError as e:
+        return estrai_json(txt, "oggetto")
+    except Exception as e:
         raise RuntimeError(
             f"risposta non interpretabile ({e}). stop_reason={dati.get('stop_reason')}, "
             f"caratteri ricevuti={len(txt)}, inizio=<<{txt[:200]}>>") from None
