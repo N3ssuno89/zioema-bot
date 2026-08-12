@@ -17,7 +17,7 @@ Aggiungere un sito = un blocco in sources.json. Nessuna riga di codice.
 import os, re, sys, json, time, html
 from urllib.parse import urljoin, urlparse
 import requests
-from common import is_asset, expand_sitemap
+from common import is_asset, expand_sitemap, estrai_json
 
 UA = {"User-Agent": "Mozilla/5.0 (compatible; ZioEMA-bot/1.0; +https://instagram.com/zioema.official)",
       "Accept-Language": "it,en;q=0.8"}
@@ -255,7 +255,7 @@ def triage(cands):
               "messages": [{"role": "user", "content": listing}]}, timeout=120)
     r.raise_for_status()
     txt = "".join(b.get("text", "") for b in r.json()["content"])
-    return json.loads(re.sub(r"^```(?:json)?|```$", "", txt.strip(), flags=re.M).strip())
+    return estrai_json(txt, "lista")
 
 
 # ------------------------------------------------------------------- main
@@ -290,11 +290,20 @@ def main():
     dry  = "--dry-run" in sys.argv
     tutte = "--all" in sys.argv      # ignora i tier: utile nei lanci a mano
     seed  = "--seed" in sys.argv     # marca tutto come gia' visto, non genera niente
+    rifai = "--ignora-visti" in sys.argv   # ripesca anche il gia' visto (prove)
+    lim   = next((int(a.split("=")[1]) for a in sys.argv if a.startswith("--max=")), 0)
+    rivedi = "--rivedi" in sys.argv  # ignora seen.json SENZA cancellarlo: lotto di prova
+    limite = 3
+    for i, a in enumerate(sys.argv):
+        if a == "--limite" and i + 1 < len(sys.argv):
+            limite = int(sys.argv[i + 1])
     sources = json.load(open("sources.json"))
     try:
-        seen = set(json.load(open(SEEN)))
+        seen_disco = set(json.load(open(SEEN)))
     except Exception:
-        seen = set()
+        seen_disco = set()
+    # --rivedi: il file resta intatto sul disco, lo si ignora solo per questo giro
+    seen = set() if rivedi else seen_disco
 
     giro = int(time.time() // 900)          # un giro ogni 15 minuti
     cands, scartati = [], []
@@ -310,7 +319,7 @@ def main():
         urls, how = discover(src)
         print(f"[{src['id']}] {how} -> {len(urls)} link")
         for u in urls:
-            if u in seen:
+            if u in seen and not rifai:
                 continue
             art = extract(u)
             if not art or not art["title"] or not art["photo"] or len(art["body"]) < 200:
@@ -338,7 +347,7 @@ def main():
         return
 
     try:
-        sigs = [set(x) for x in json.load(open("sigs.json"))]
+        sigs = [] if rifai else [set(x) for x in json.load(open("sigs.json"))]
     except Exception:
         sigs = []
     cands, doppioni = dedup(cands, sigs)
@@ -347,7 +356,8 @@ def main():
     print(f"dedup: {len(cands)} rimasti, {len(doppioni)} doppioni")
 
     if not cands:
-        json.dump(sorted(seen)[-2000:], open(SEEN, "w"), indent=1)
+        if not rivedi:
+            json.dump(sorted(seen)[-2000:], open(SEEN, "w"), indent=1)
         return
 
     if not API_KEY:
@@ -360,6 +370,10 @@ def main():
         mark = "PUBBLICA" if v["pubblica"] else "scarta  "
         print(f"  {mark}  [{c['fonte']}] {c['title'][:70]}  — {v['perche'][:60]}")
         (promossi if v["pubblica"] else []).append(c) if v["pubblica"] else seen.add(c["url"])
+
+    if rivedi and len(promossi) > limite:
+        print(f"--rivedi: {len(promossi)} promossi, ne genero solo {limite} (usa --limite N)")
+        promossi = promossi[:limite]
 
     print(f"\nstadio 2: {len(promossi)} da scrivere su {len(cands)} candidati")
     if not promossi and not dry:
@@ -378,6 +392,9 @@ def main():
             sigs.append(c["_sig"])
         except Exception as e:
             print(f"  ! {e}")
+    if rivedi:
+        print("--rivedi: seen.json NON modificato, era solo una prova.")
+        return
     json.dump(sorted(seen)[-2000:], open(SEEN, "w"), indent=1)
     json.dump([sorted(s_) for s_ in sigs[-300:]], open("sigs.json", "w"))
 
