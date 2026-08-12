@@ -19,6 +19,8 @@ STATO
     seen.json — url già processati. Se lo cancelli, rimanda tutto.
 """
 import os, re, sys, json, time, subprocess
+from urllib.parse import urljoin, urlparse
+from common import is_asset
 import requests
 
 # UNA SOLA lista di sorgenti, condivisa con harvest.py: sources.json.
@@ -91,46 +93,6 @@ def src_for(url):
     return max(cand, key=lambda x: len(x["base"]))
 
 
-def discover(limit=15):
-    """Restituisce URL candidati. Non filtra per categoria: quella si legge
-    sull'articolo, che è l'unico posto dove è garantita."""
-    out = []
-    for s_ in SOURCES:
-        for listing in s_["listings"]:
-            html = get(listing)
-            if not html:
-                continue
-            found = []
-            for path in re.findall(s_["art_re"], html):
-                if any(path.startswith(k) for k in s_["skip"]):
-                    continue
-                u = s_["base"] + path if path.startswith("/") else path
-                if u not in found:
-                    found.append(u)
-            if len(found) >= 3:
-                print(f"  [{s_['id']}] {listing}: {len(found)} link")
-                out += found[:limit]
-                break
-        else:
-            print(f"  [{s_['id']}] nessun elenco leggibile")
-    if out:
-        return out
-
-    for sm in SITEMAPS:                       # fallback
-        xml = get(sm)
-        if xml and "<loc>" in xml:
-            locs = re.findall(r"<loc>([^<]+)</loc>", xml)
-            arts = [u for u in locs if u.startswith(BASE)
-                    and not any(u.replace(BASE, "").startswith(s) for s in SKIP)]
-            if arts:
-                print(f"  elenco: {sm} (sitemap, {len(arts)} link)")
-                return arts[-limit:][::-1]
-
-    print("  ! nessun elenco leggibile — vedi README, sezione 'se discover non trova nulla'")
-    return []
-
-
-# ----------------------------------------------------------------- PARSING
 def parse_article(url, src=None):
     src = src or src_for(url)
     html = get(url)
@@ -158,9 +120,17 @@ def parse_article(url, src=None):
             break
         clean.append(p)
 
-    related = [src["base"] + r if r.startswith("/") else r
-               for r in dict.fromkeys(re.findall(src["art_re"], body))]
-    related = [r for r in related if r != url][:2]
+    # gli articoli collegati ("QUI la notizia") danno le statistiche incrociate:
+    # si riconoscono con lo stesso url_pattern usato da harvest.py
+    pat = re.compile(src.get("url_pattern", "."))
+    related = []
+    for h in dict.fromkeys(re.findall(r'href=["\']([^"\']+)', body)):
+        u2 = urljoin(src["base"], h)
+        if u2 == url or not u2.startswith(src["base"]) or is_asset(u2):
+            continue
+        if pat.search(urlparse(u2).path):
+            related.append(u2)
+    related = related[:2]
 
     m = re.search(r"(\d{2}\s+[a-z]+\s+20\d{2})", text)
     return {"url": url, "src": src["id"], "fonte": src["fonte"], "lang": src["lang"],
@@ -359,7 +329,8 @@ if __name__ == "__main__":
     if not DRY and not (TG_TOKEN and TG_CHAT):
         sys.exit("mancano TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID")
 
-    forced = [a for a in sys.argv[1:] if a.startswith("http")]
+    # .strip(): il campo del workflow lascia spazi in coda se si incolla da mobile
+    forced = [a.strip() for a in sys.argv[1:] if a.strip().startswith("http")]
     seen = load_seen()
     targets = forced or [u for u in discover() if u not in seen]
     print(f"{len(targets)} da valutare")
