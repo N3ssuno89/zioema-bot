@@ -153,13 +153,25 @@ REGOLE TITOLO (vincolanti)
   o ranking nell'articolo prima di scegliere il registro.
 - Il gancio migliore è quasi sempre un numero o un nome grosso, non l'esito generico.
 
-REGOLE CAPTION
+REGOLE CAPTION (vincolanti)
+- MASSIMO 350 CARATTERI hashtag esclusi. È una didascalia Instagram, non un articolo.
+  Se non ci sta, taglia: prima i dettagli di contorno, poi i punteggi. MAI il gancio in avanti.
+- Massimo 3 blocchi di testo separati da riga vuota. Non uno in più.
 - Payoff nei PRIMI 125 CARATTERI: Instagram tronca lì e il titolo ha già promesso qualcosa.
-- Punteggi e tempi come gancio narrativo, non come elenco.
-- Il gancio in avanti (prossimo match: data, ora, posta in gioco) va in ALTO, non in fondo.
+- Il gancio in avanti (prossimo appuntamento: data, posta in gioco) va in ALTO, non in fondo.
   Se orario o avversario non sono noti non prometterli: di' che arrivano in Story.
-- Chiudi con "📌 Fonte: {FONTE}" (te la passo io) e 6-8 hashtag pertinenti.
+- Chiudi con "📌 Fonte: {FONTE}" (te la passo io) e 5-7 hashtag pertinenti.
 - Italiano, tono diretto, emoji con parsimonia.
+
+DI CHI PARLA IL POST — sbagliarlo è l'errore peggiore
+Il protagonista è chi ha fatto la notizia, NON per forza un italiano. Se l'articolo
+racconta la vittoria di una coppia brasiliana, il post parla di quella coppia: gli
+italiani, se ci sono, entrano come comprimari in una riga.
+Forzare il taglio italiano su una notizia che italiana non è produce due danni:
+racconti da perdenti una storia che è di qualcun altro, e il titolo non corrisponde
+più alla foto scelta dalla fonte.
+Regola pratica: guarda CHI c'è nella foto che ti passo. Il titolo deve parlare di
+loro. Se nella foto esultano i brasiliani, il titolo non può essere sugli italiani.
 
 VALORE AGGIUNTO — la parte che conta
 Ti passo anche gli articoli precedenti collegati. Cerca dati che Federvolley HA ma NON HA
@@ -199,17 +211,27 @@ Rispondi SOLO con JSON, niente markdown, niente backtick:
 {"skip":false,"skip_reason":"","line1":"...","line2":"...","caption":"...","insight":"...","warnings":["..."]}"""
 
 
-def generate_copy(article, context):
+def _immagine_per_modello(path, lato=1024):
+    """Ridimensiona e codifica la foto: senza vederla il modello scrive titoli
+    che non corrispondono all'immagine (es. titolo sugli italiani su una foto
+    di brasiliani sul podio)."""
+    import base64, io
+    from PIL import Image
+    im = Image.open(path).convert("RGB")
+    im.thumbnail((lato, lato), Image.LANCZOS)
+    buf = io.BytesIO()
+    im.save(buf, "JPEG", quality=82)
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+def generate_copy(article, context, photo_path=None):
     ctx = "\n\n".join(f"--- ARTICOLO PRECEDENTE COLLEGATO ---\n{c['title']}\n{c['body']}"
                       for c in context if c)
     r = requests.post("https://api.anthropic.com/v1/messages",
         headers={"x-api-key": API_KEY, "anthropic-version": "2023-06-01",
                  "content-type": "application/json"},
         json={"model": MODEL, "max_tokens": 2000, "system": SYSTEM,
-              "messages": [{"role": "user", "content":
-                  f"FONTE: {article['fonte']} (lingua: {article['lang']})\n"
-                  f"TITOLO ORIGINALE: {article['title']}\n"
-                  f"Data: {article['date']}\n\n{article['body']}\n\n{ctx}"}]},
+              "messages": [{"role": "user", "content": contenuto}]},
         timeout=90)
     if r.status_code != 200:
         raise RuntimeError(f"API HTTP {r.status_code}: {r.text[:300]}")
@@ -340,7 +362,7 @@ def process(url):
     open(photo, "wb").write(requests.get(art["photo"], headers=UA, timeout=40).content)
 
     context = [parse_article(r) for r in art["related"]]
-    copy = generate_copy(art, context)
+    copy = generate_copy(art, context, photo)
     if copy.get("skip"):
         return f"scartata: {copy.get('skip_reason','non rilevante')}"
     crop = smart_crop(photo)
