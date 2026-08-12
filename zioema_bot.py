@@ -207,6 +207,8 @@ SE L'ARTICOLO NON È IN ITALIANO
 
 Se un dato non è nell'articolo NON inventarlo: mettilo in "warnings".
 
+NON scrivere ragionamenti, analisi o preamboli prima del JSON: le regole qui sopra
+applicale in silenzio. Il primo carattere della risposta deve essere una graffa.
 Rispondi SOLO con JSON, niente markdown, niente backtick:
 {"skip":false,"skip_reason":"","line1":"...","line2":"...","caption":"...","insight":"...","warnings":["..."]}"""
 
@@ -246,13 +248,14 @@ def generate_copy(article, context, photo_path=None):
     r = requests.post("https://api.anthropic.com/v1/messages",
         headers={"x-api-key": API_KEY, "anthropic-version": "2023-06-01",
                  "content-type": "application/json"},
-        json={"model": MODEL, "max_tokens": 3000, "system": SYSTEM,
-              "messages": [{"role": "user", "content": contenuto}]},
+        json={"model": MODEL, "max_tokens": 4000, "system": SYSTEM,
+              "messages": [{"role": "user", "content": contenuto},
+                           {"role": "assistant", "content": "{"}]},
         timeout=90)
     if r.status_code != 200:
         raise RuntimeError(f"API HTTP {r.status_code}: {r.text[:300]}")
     dati = r.json()
-    txt = "".join(b.get("text", "") for b in dati.get("content", []))
+    txt = "{" + "".join(b.get("text", "") for b in dati.get("content", []))
     pulito = re.sub(r"^```(?:json)?|```$", "", txt.strip(), flags=re.M).strip()
 
     # se il modello ha aggiunto una frase prima o dopo, tieni solo l'oggetto JSON
