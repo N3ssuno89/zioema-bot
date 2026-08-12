@@ -232,23 +232,49 @@ def generate_copy(article, context):
 
 # ------------------------------------------------------------ CROP AUTOMATICO
 def smart_crop(path):
-    import cv2
-    img = cv2.imread(path)
-    h, w = img.shape[:2]
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    cc = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-    faces = cc.detectMultiScale(gray, 1.08, 6, minSize=(int(h * .05), int(h * .05)))
+    """Calcola il taglio: sopra la linea del costume, centrato sui volti.
+
+    La face detection e' un di piu': se OpenCV non c'e' o non funziona sul
+    runner, si ripiega su un taglio prudente e si avvisa. Meglio una bozza da
+    ricontrollare che nessuna bozza."""
+    from PIL import Image
+    w, h = Image.open(path).size
+
+    def ripiego(motivo):
+        return {"CROP_TOP": 0, "CROP_BOTTOM": int(h * 0.78), "CX": w // 2,
+                "PHOTO_H": 900, "FADE_START": 520,
+                "warning": f"TAGLIO NON VERIFICATO ({motivo}): controlla che "
+                           f"l'inquadratura sia sopra la linea del costume"}
+
+    try:
+        import cv2
+        if not hasattr(cv2, "CascadeClassifier"):
+            return ripiego("OpenCV incompleto")
+        xml = os.path.join(getattr(cv2, "data").haarcascades,
+                           "haarcascade_frontalface_default.xml")
+        if not os.path.exists(xml):
+            return ripiego("modelli Haar non installati")
+        img = cv2.imread(path)
+        if img is None:
+            return ripiego("immagine illeggibile")
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        faces = cv2.CascadeClassifier(xml).detectMultiScale(
+            gray, 1.08, 6, minSize=(int(h * .05), int(h * .05)))
+    except Exception as e:
+        return ripiego(f"{type(e).__name__}")
 
     if len(faces) == 0:
-        return {"CROP_TOP": 0, "CROP_BOTTOM": int(h * .80), "CX": w // 2,
+        return {"CROP_TOP": 0, "CROP_BOTTOM": int(h * .78), "CX": w // 2,
                 "PHOTO_H": 900, "FADE_START": 520,
-                "warning": "NESSUN VOLTO RILEVATO — la foto non rispetta il criterio editoriale, cambiala"}
+                "warning": "NESSUN VOLTO RILEVATO — la foto non rispetta il "
+                           "criterio editoriale, cambiala"}
 
     fh_max = max(f[3] for f in faces)
-    warn = "VOLTI PICCOLI — l'emozione non si legge, valuta un'altra foto" if fh_max < h * .12 else None
+    warn = ("VOLTI PICCOLI — l'emozione non si legge, valuta un'altra foto"
+            if fh_max < h * .12 else None)
     cx = int(sum(f[0] + f[2] / 2 for f in faces) / len(faces))
     top = max(0, int(min(f[1] for f in faces) - fh_max * .9))
-    bottom = min(h, int(max(f[1] + f[3] for f in faces) + fh_max * 4.5))   # stima linea vita
+    bottom = min(h, int(max(f[1] + f[3] for f in faces) + fh_max * 4.5))  # stima vita
     if bottom - top < h * .35:
         bottom = min(h, top + int(h * .55))
     return {"CROP_TOP": top, "CROP_BOTTOM": bottom, "CX": cx,
