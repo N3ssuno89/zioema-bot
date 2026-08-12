@@ -227,10 +227,26 @@ def _immagine_per_modello(path, lato=1024):
 def generate_copy(article, context, photo_path=None):
     ctx = "\n\n".join(f"--- ARTICOLO PRECEDENTE COLLEGATO ---\n{c['title']}\n{c['body']}"
                       for c in context if c)
+
+    testo = (f"FONTE: {article['fonte']} (lingua: {article['lang']})\n"
+             f"TITOLO ORIGINALE: {article['title']}\n"
+             f"Data: {article['date']}\n\n{article['body']}\n\n{ctx}")
+    contenuto = [{"type": "text", "text": testo}]
+    if photo_path and os.path.exists(photo_path):
+        try:
+            contenuto.insert(0, {"type": "image", "source": {
+                "type": "base64", "media_type": "image/jpeg",
+                "data": _immagine_per_modello(photo_path)}})
+            contenuto.append({"type": "text", "text":
+                "La foto qui sopra e' quella che finira' nel post: il titolo deve "
+                "parlare delle persone che ci sono dentro."})
+        except Exception as e:
+            print(f"  . foto non allegata al modello ({e})")
+
     r = requests.post("https://api.anthropic.com/v1/messages",
         headers={"x-api-key": API_KEY, "anthropic-version": "2023-06-01",
                  "content-type": "application/json"},
-        json={"model": MODEL, "max_tokens": 2000, "system": SYSTEM,
+        json={"model": MODEL, "max_tokens": 3000, "system": SYSTEM,
               "messages": [{"role": "user", "content": contenuto}]},
         timeout=90)
     if r.status_code != 200:
