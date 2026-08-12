@@ -20,7 +20,7 @@ STATO
 """
 import os, re, sys, json, time, subprocess
 from urllib.parse import urljoin, urlparse
-from common import is_asset
+from common import is_asset, estrai_json
 import requests
 
 # UNA SOLA lista di sorgenti, condivisa con harvest.py: sources.json.
@@ -205,15 +205,29 @@ def generate_copy(article, context):
     r = requests.post("https://api.anthropic.com/v1/messages",
         headers={"x-api-key": API_KEY, "anthropic-version": "2023-06-01",
                  "content-type": "application/json"},
-        json={"model": MODEL, "max_tokens": 1500, "system": SYSTEM,
+        json={"model": MODEL, "max_tokens": 2000, "system": SYSTEM,
               "messages": [{"role": "user", "content":
                   f"FONTE: {article['fonte']} (lingua: {article['lang']})\n"
                   f"TITOLO ORIGINALE: {article['title']}\n"
                   f"Data: {article['date']}\n\n{article['body']}\n\n{ctx}"}]},
         timeout=90)
-    r.raise_for_status()
-    txt = "".join(b.get("text", "") for b in r.json()["content"])
-    return json.loads(re.sub(r"^```(?:json)?|```$", "", txt.strip(), flags=re.M).strip())
+    if r.status_code != 200:
+        raise RuntimeError(f"API HTTP {r.status_code}: {r.text[:300]}")
+    dati = r.json()
+    txt = "".join(b.get("text", "") for b in dati.get("content", []))
+    pulito = re.sub(r"^```(?:json)?|```$", "", txt.strip(), flags=re.M).strip()
+
+    # se il modello ha aggiunto una frase prima o dopo, tieni solo l'oggetto JSON
+    if not pulito.startswith("{"):
+        g = re.search(r"\{.*\}", pulito, re.S)
+        pulito = g.group(0) if g else pulito
+
+    try:
+        return json.loads(pulito)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"risposta non interpretabile ({e}). stop_reason={dati.get('stop_reason')}, "
+            f"caratteri ricevuti={len(txt)}, inizio=<<{txt[:200]}>>") from None
 
 
 # ------------------------------------------------------------ CROP AUTOMATICO
