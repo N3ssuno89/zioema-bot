@@ -209,8 +209,19 @@ Se un dato non è nell'articolo NON inventarlo: mettilo in "warnings".
 
 NON scrivere ragionamenti, analisi o preamboli prima del JSON: le regole qui sopra
 applicale in silenzio. Il primo carattere della risposta deve essere una graffa.
+DOVE TAGLIARE LA FOTO (guardala e misura a occhio, in percentuale)
+- foto_taglio_basso: dove passa la linea del costume/pantaloncini del soggetto piu'
+  in basso, come frazione dell'altezza (0 = bordo alto, 1 = bordo basso). Il taglio
+  deve stare SOPRA quella linea. Se i corpi sono interi, di solito sta fra 0.45 e 0.65.
+- foto_taglio_alto: quanto togliere sopra le teste (di solito 0.0-0.15).
+- foto_centro_x: dove sta il centro dei volti, come frazione della larghezza.
+- foto_ok: false se nella foto non si legge nessun volto, o se il soggetto della
+  notizia non c'e'. In quel caso spiega in warnings.
+
 Rispondi SOLO con JSON, niente markdown, niente backtick:
-{"skip":false,"skip_reason":"","line1":"...","line2":"...","caption":"...","insight":"...","warnings":["..."]}"""
+{"skip":false,"skip_reason":"","line1":"...","line2":"...","caption":"...",
+ "foto_taglio_alto":0.0,"foto_taglio_basso":0.55,"foto_centro_x":0.5,"foto_ok":true,
+ "insight":"...","warnings":["..."]}"""
 
 
 def _immagine_per_modello(path, lato=1024):
@@ -325,7 +336,7 @@ def revisione_italiano(copy):
 
 
 # ------------------------------------------------------------ CROP AUTOMATICO
-def smart_crop(path):
+def smart_crop(path, copy=None):
     """Calcola il taglio: sopra la linea del costume, centrato sui volti.
 
     La face detection e' un di piu': se OpenCV non c'e' o non funziona sul
@@ -333,6 +344,21 @@ def smart_crop(path):
     ricontrollare che nessuna bozza."""
     from PIL import Image
     w, h = Image.open(path).size
+
+    # 1) il modello ha visto la foto: la sua stima batte l'euristica
+    if copy:
+        try:
+            basso = float(copy.get("foto_taglio_basso") or 0)
+            alto  = float(copy.get("foto_taglio_alto") or 0)
+            cx    = float(copy.get("foto_centro_x") or 0.5)
+            if 0.25 <= basso <= 0.95 and 0 <= alto < basso:
+                avviso = None if copy.get("foto_ok", True) else \
+                    "IL MODELLO SEGNALA LA FOTO COME NON ADATTA: cambiala"
+                return {"CROP_TOP": int(h * alto), "CROP_BOTTOM": int(h * basso),
+                        "CX": int(w * min(max(cx, 0.05), 0.95)),
+                        "PHOTO_H": 900, "FADE_START": 520, "warning": avviso}
+        except (TypeError, ValueError):
+            pass
 
     def ripiego(motivo):
         return {"CROP_TOP": 0, "CROP_BOTTOM": int(h * 0.78), "CX": w // 2,
@@ -440,7 +466,7 @@ def process(url):
     copy, corretti = revisione_italiano(copy)
     for c in corretti:
         print(f"  . italiano corretto: {c}")
-    crop = smart_crop(photo)
+    crop = smart_crop(photo, copy)
     post = os.path.join(out, "post.jpg")
 
     env = {**os.environ, "SRC": photo, "FONTE": art["fonte"],
